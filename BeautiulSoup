@@ -1,0 +1,67 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# Fetch the HTML content from the Wikipedia page
+url = 'https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(nominal)'
+resp = requests.get(url)
+soup = BeautifulSoup(resp.content, 'html.parser')
+
+# Locate the table with GDP data
+table = soup.find('table', {'class': 'wikitable'})
+
+# Extract headers
+headers = [header.text.strip() for header in table.find_all('th')]
+
+# Extract rows
+rows = []
+for row in table.find_all('tr')[1:]:  # Skip the header row
+    cells = [cell.text.strip() for cell in row.find_all('td')]
+    if cells:  # Only add rows with data
+        rows.append(cells)
+
+# Match rows with headers by trimming or padding
+rows = [row[:len(headers)] for row in rows]  # Truncate extra columns
+rows = [row + [""] * (len(headers) - len(row)) for row in rows]  # Pad missing columns
+
+# Print the table in tabular format
+print("\t".join(headers))  # Print headers
+for row in rows[:10]:  # Limit to first 10 rows for display
+    print("\t".join(row))  # Print each row
+
+# Create the DataFrame
+df = pd.DataFrame(rows, columns=headers)
+
+# Display the DataFrame
+print("\nDisplay DataFrame:")
+print(df.head())
+
+# 1. Check the structure of the DataFrame
+print("\n1.DataFrame Structure:")
+print(df.info())
+
+# 2. Check for missing values
+print("\n2.Missing Values:")
+print(df.isnull().sum())
+
+# 3. Rename a column
+df.rename(columns={headers[0]: "Country"}, inplace=True)
+print("\n3.Renamed Column:")
+print(df.head())
+
+# 4. Filter rows based on a condition (e.g., filter rows where IMF GDP value is not empty)
+filtered_df = df[df[headers[1]].str.replace(",", "").str.isnumeric()]
+print("\n4.Filtered Rows where IMF GDP value is not empty:")
+print(filtered_df.head())
+
+# 5. Add a new column that calculates the length of the 'Country' name
+df["Country_Name_Length"] = df["Country"].apply(len)
+print("\n5.DataFrame with 'Country_Name_Length' column:")
+print(df.head())
+
+# 6. Sort the DataFrame based on 'Country_Name_Length' in descending order
+sorted_df = df.sort_values(by="Country_Name_Length", ascending=False)
+print("\n6.Sorted DataFrame based on 'Country_Name_Length':")
+print(sorted_df.head())
+
+
